@@ -1,166 +1,439 @@
-const skills = [
-  'React',
-  'Tailwind CSS',
-  'Vite',
-  'JavaScript',
-  'Accessibility',
-  'Responsive UI',
-]
+import { Suspense, lazy, useCallback, useEffect, useRef, useState } from 'react'
 
-const projects = [
-  {
-    title: 'Featured Project',
-    description:
-      'A polished case study for your best work. Highlight the problem, your process, and the measurable result.',
-  },
-  {
-    title: 'Client Collaboration',
-    description:
-      'Use this section for freelance work, agency projects, or product features where collaboration mattered.',
-  },
-  {
-    title: 'Experimental Build',
-    description:
-      'Show something playful here: animations, design systems, dashboards, or an app that explores a new idea.',
-  },
-]
+import DeferredSection from './components/DeferredSection.jsx'
+import RevealBlock from './components/RevealBlock.jsx'
+import SectionDivider from './components/SectionDivider.jsx'
+import SectionHeading from './components/SectionHeading.jsx'
+import TechMarquee from './components/TechMarquee.jsx'
+import Typewriter from './components/Typewriter.jsx'
+import { siteContent } from './content/siteContent.js'
+import { useReducedMotion } from './hooks/useReducedMotion.js'
+import {
+  getActiveSectionId,
+  scrollToSectionById,
+} from './utils/scrollToSection.js'
+
+// Code-split heavy sections so the initial bundle only ships the hero scaffold
+// and lightweight chrome. The chunks get fetched on demand as the user scrolls.
+const AboutCardsStack = lazy(() => import('./components/AboutCardsStack.jsx'))
+const ProjectsSection = lazy(() => import('./components/ProjectsSection.jsx'))
+const EducationStackSection = lazy(() => import('./components/EducationStackSection.jsx'))
+const ContactSection = lazy(() => import('./components/ContactSection.jsx'))
+const FooterSignal = lazy(() => import('./components/FooterSignal.jsx'))
+
+const observedSections = siteContent.navigation.map((link) => link.href.slice(1))
+
+function SectionFallback({ minHeight = '60vh' }) {
+  return <div className="section-skeleton" style={{ minHeight }} aria-hidden="true" />
+}
 
 function App() {
-  return (
-    <div className="min-h-screen text-slate-100">
-      <header className="mx-auto flex w-full max-w-6xl items-center justify-between px-6 py-6 lg:px-8">
-        <a href="#home" className="text-lg font-semibold tracking-tight text-white">
-          Your Name
-        </a>
-        <nav className="hidden gap-6 text-sm text-slate-300 md:flex">
-          <a href="#about" className="transition hover:text-white">
-            About
-          </a>
-          <a href="#projects" className="transition hover:text-white">
-            Projects
-          </a>
-          <a href="#contact" className="transition hover:text-white">
-            Contact
-          </a>
-        </nav>
-      </header>
+  const prefersReducedMotion = useReducedMotion()
+  const introTimersRef = useRef([])
+  const [menuOpen, setMenuOpen] = useState(false)
+  const [systemStatus, setSystemStatus] = useState(siteContent.intro.initialStatus)
+  const [accessGranted, setAccessGranted] = useState(false)
+  const [gatesOpen, setGatesOpen] = useState(false)
+  const [zoomPast, setZoomPast] = useState(false)
+  const [mainLoaded, setMainLoaded] = useState(false)
+  const [showOverlay, setShowOverlay] = useState(true)
+  const [activeSection, setActiveSection] = useState('about')
+  const [navScrolled, setNavScrolled] = useState(false)
+  const [heroShift, setHeroShift] = useState({ x: 0, y: 0 })
 
-      <main id="home" className="mx-auto flex w-full max-w-6xl flex-col gap-24 px-6 pb-20 pt-8 lg:px-8">
-        <section className="grid gap-10 lg:grid-cols-[1.2fr_0.8fr] lg:items-center">
-          <div className="space-y-6">
-            <p className="inline-flex rounded-full border border-sky-400/30 bg-sky-400/10 px-4 py-2 text-sm text-sky-200">
-              Frontend developer portfolio starter
-            </p>
-            <div className="space-y-4">
-              <h1 className="max-w-3xl text-5xl font-semibold tracking-tight text-white sm:text-6xl">
-                Build a portfolio that feels fast, modern, and unmistakably yours.
-              </h1>
-              <p className="max-w-2xl text-lg leading-8 text-slate-300">
-                This starter gives you a clean React + Tailwind foundation for showcasing
-                your skills, featured work, and contact details.
-              </p>
+  const clearIntroTimers = useCallback(() => {
+    introTimersRef.current.forEach((timer) => window.clearTimeout(timer))
+    introTimersRef.current = []
+  }, [])
+
+  useEffect(() => {
+    window.scrollTo(0, 0)
+    const frame = requestAnimationFrame(() => window.scrollTo(0, 0))
+    return () => cancelAnimationFrame(frame)
+  }, [])
+
+  useEffect(() => {
+    document.title = siteContent.site.title
+
+    if (prefersReducedMotion) {
+      introTimersRef.current = [
+        window.setTimeout(() => {
+          setSystemStatus(siteContent.intro.calibratingStatus)
+        }, 350),
+        window.setTimeout(() => {
+          setSystemStatus(siteContent.intro.readyStatus)
+          setAccessGranted(true)
+        }, 1400),
+        window.setTimeout(() => {
+          setGatesOpen(true)
+          setZoomPast(true)
+          setMainLoaded(true)
+        }, 2550),
+        window.setTimeout(() => {
+          setShowOverlay(false)
+        }, 3400),
+      ]
+
+      return () => {
+        clearIntroTimers()
+      }
+    }
+
+    introTimersRef.current = [
+      window.setTimeout(() => {
+        setSystemStatus(siteContent.intro.calibratingStatus)
+      }, 1050),
+      window.setTimeout(() => {
+        setSystemStatus(siteContent.intro.readyStatus)
+        setAccessGranted(true)
+      }, 2250),
+      window.setTimeout(() => {
+        setGatesOpen(true)
+        setZoomPast(true)
+        setMainLoaded(true)
+      }, 3400),
+      window.setTimeout(() => {
+        setShowOverlay(false)
+      }, 4300),
+    ]
+
+    return () => {
+      clearIntroTimers()
+    }
+  }, [clearIntroTimers, prefersReducedMotion])
+
+  const updateActiveSection = useCallback(() => {
+    setActiveSection(getActiveSectionId(observedSections, { heroFallback: 'about' }))
+  }, [])
+
+  useEffect(() => {
+    let rafId = 0
+
+    const onScrollOrResize = () => {
+      if (rafId) {
+        return
+      }
+      rafId = requestAnimationFrame(() => {
+        rafId = 0
+        setNavScrolled(window.scrollY > 24)
+        updateActiveSection()
+      })
+    }
+
+    onScrollOrResize()
+    window.addEventListener('scroll', onScrollOrResize, { passive: true })
+    window.addEventListener('resize', onScrollOrResize, { passive: true })
+
+    return () => {
+      window.removeEventListener('scroll', onScrollOrResize)
+      window.removeEventListener('resize', onScrollOrResize)
+      if (rafId) {
+        cancelAnimationFrame(rafId)
+      }
+    }
+  }, [updateActiveSection])
+
+  useEffect(() => {
+    if (!prefersReducedMotion && !mainLoaded) {
+      return undefined
+    }
+
+    const frame = requestAnimationFrame(() => {
+      updateActiveSection()
+    })
+
+    return () => cancelAnimationFrame(frame)
+  }, [mainLoaded, prefersReducedMotion, updateActiveSection])
+
+  const handleSectionLinkClick = useCallback(
+    (event, href) => {
+      event.preventDefault()
+
+      const sectionId = href.replace(/^#/, '')
+
+      const smooth = !prefersReducedMotion
+
+      scrollToSectionById(sectionId, {
+        smooth,
+        onComplete: updateActiveSection,
+      })
+
+      if (!smooth) {
+        updateActiveSection()
+      } else {
+        setActiveSection(sectionId)
+      }
+
+      setMenuOpen(false)
+    },
+    [prefersReducedMotion, updateActiveSection],
+  )
+
+  const handleHeroMove = (event) => {
+    if (prefersReducedMotion) {
+      return
+    }
+
+    const bounds = event.currentTarget.getBoundingClientRect()
+    const nextX = ((event.clientX - bounds.left) / bounds.width - 0.5) * 28
+    const nextY = ((event.clientY - bounds.top) / bounds.height - 0.5) * 18
+
+    setHeroShift({ x: nextX, y: nextY })
+  }
+
+  const resetHeroMove = () => {
+    setHeroShift({ x: 0, y: 0 })
+  }
+
+  const cinematicReady = prefersReducedMotion || mainLoaded
+
+  return (
+    <div className="antialiased">
+      {showOverlay ? (
+        <div id="intro-overlay" className={gatesOpen ? 'gates-open' : ''}>
+          <div className="gate gate-top" />
+          <div className="gate gate-bottom" />
+
+          <div id="intro-content" className={`intro-content ${zoomPast ? 'zoom-past' : ''}`}>
+            <div className="intro-label">{siteContent.intro.label}</div>
+            <h1 className="intro-name font-lol">{siteContent.site.ownerName}</h1>
+            <div className="loading-container">
+              <div className="loading-bar" />
             </div>
-            <div className="flex flex-wrap gap-4">
-              <a
-                href="#projects"
-                className="rounded-full bg-white px-5 py-3 text-sm font-medium text-slate-950 transition hover:bg-slate-200"
-              >
-                View projects
-              </a>
-              <a
-                href="#contact"
-                className="rounded-full border border-white/15 px-5 py-3 text-sm font-medium text-white transition hover:border-white/40 hover:bg-white/5"
-              >
-                Get in touch
-              </a>
+            <div className={`system-status ${accessGranted ? 'system-status-ready' : ''}`}>
+              {systemStatus}
             </div>
           </div>
+        </div>
+      ) : null}
 
-          <div className="rounded-3xl border border-white/10 bg-white/5 p-6 shadow-2xl shadow-slate-950/30 backdrop-blur">
-            <div className="rounded-2xl border border-white/10 bg-slate-950/70 p-6">
-              <p className="text-sm uppercase tracking-[0.3em] text-sky-300">Now building</p>
-              <h2 className="mt-4 text-2xl font-semibold text-white">Portfolio website</h2>
-              <p className="mt-3 text-slate-300">
-                Customize this panel with your elevator pitch, current availability, or
-                the kind of roles and clients you are targeting.
-              </p>
-              <div className="mt-6 grid gap-3 sm:grid-cols-2">
-                {skills.map((skill) => (
-                  <div
-                    key={skill}
-                    className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-slate-200"
+      <div
+        id="main-content"
+        className={`relative z-0 flex min-h-screen flex-col ${cinematicReady ? 'loaded' : ''}`}
+      >
+        <nav className={`sticky top-0 z-50 w-full px-6 py-4 backdrop-blur-sm ${navScrolled ? 'nav-scrolled' : ''}`}>
+          <div className="mx-auto flex max-w-7xl items-center justify-end md:justify-center">
+            <div className="hidden space-x-8 text-sm tracking-widest md:flex font-lol">
+              {siteContent.navigation.map((link) => {
+                const sectionId = link.href.slice(1)
+                const isActive = activeSection === sectionId
+
+                return (
+                  <a
+                    key={link.href}
+                    href={link.href}
+                    className={`nav-link ${isActive ? 'nav-link-active' : ''}`}
+                    aria-current={isActive ? 'page' : undefined}
+                    onClick={(event) => handleSectionLinkClick(event, link.href)}
                   >
-                    {skill}
-                  </div>
+                    {link.label}
+                  </a>
+                )
+              })}
+            </div>
+
+            <button
+              type="button"
+              className="text-[#c8aa6e] transition-colors hover:text-[#0ac8b9] md:hidden"
+              aria-label="Toggle navigation menu"
+              aria-expanded={menuOpen}
+              onClick={() => setMenuOpen((open) => !open)}
+            >
+              <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  d="M4 6h16M4 12h16m-7 6h7"
+                />
+              </svg>
+            </button>
+          </div>
+
+          {menuOpen ? (
+            <div className="mx-auto mt-4 max-w-7xl rounded-2xl border border-[#c8aa6e]/25 bg-[#010a13]/95 p-4 md:hidden">
+              <div className="flex flex-col gap-4 text-sm tracking-[0.3em] uppercase font-lol">
+                {siteContent.navigation.map((link) => (
+                  <a
+                    key={link.href}
+                    href={link.href}
+                    className={`nav-link w-fit ${activeSection === link.href.slice(1) ? 'nav-link-active' : ''}`}
+                    onClick={(event) => handleSectionLinkClick(event, link.href)}
+                  >
+                    {link.label}
+                  </a>
                 ))}
               </div>
             </div>
-          </div>
-        </section>
+          ) : null}
+        </nav>
 
         <section
-          id="about"
-          className="grid gap-8 rounded-3xl border border-white/10 bg-slate-950/50 p-8 backdrop-blur lg:grid-cols-2"
+          id="home"
+          className="hero-shell relative flex items-center justify-center px-6 py-12"
+          onMouseMove={handleHeroMove}
+          onMouseLeave={resetHeroMove}
+          style={{
+            '--hero-shift-x': `${heroShift.x}px`,
+            '--hero-shift-y': `${heroShift.y}px`,
+          }}
         >
-          <div className="space-y-4">
-            <p className="text-sm font-medium uppercase tracking-[0.3em] text-sky-300">About</p>
-            <h2 className="text-3xl font-semibold tracking-tight text-white">
-              Introduce who you are and how you work.
-            </h2>
+          <div className="hero-scene" aria-hidden="true">
+            <div className="hero-grid" />
+            <div className="hero-orbit hero-orbit-outer" />
+            <div className="hero-orbit hero-orbit-middle" />
+            <div className="hero-orbit hero-orbit-inner" />
+            <div className="hero-core-glow" />
+            <svg viewBox="0 0 100 100" className="hero-hex">
+              <polygon points="50,5 95,25 95,75 50,95 5,75 5,25" fill="none" stroke="currentColor" strokeWidth="0.5" />
+              <polygon points="50,15 85,30 85,70 50,85 15,70 15,30" fill="none" stroke="currentColor" strokeWidth="0.24" />
+              <circle cx="50" cy="50" r="10" fill="none" stroke="#c8aa6e" strokeWidth="0.5" />
+            </svg>
           </div>
-          <div className="space-y-4 text-slate-300">
-            <p>
-              Add a concise summary here about your background, the products you like to
-              build, and what makes your approach valuable to teams or clients.
-            </p>
-            <p>
-              Good portfolios usually focus on clarity: who you help, what you ship, and
-              the results your work creates.
-            </p>
-          </div>
-        </section>
 
-        <section id="projects" className="space-y-8">
-          <div className="space-y-3">
-            <p className="text-sm font-medium uppercase tracking-[0.3em] text-sky-300">Projects</p>
-            <h2 className="text-3xl font-semibold tracking-tight text-white">
-              Feature the work you want more of.
-            </h2>
-          </div>
-          <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
-            {projects.map((project) => (
-              <article
-                key={project.title}
-                className="rounded-3xl border border-white/10 bg-white/5 p-6 transition hover:-translate-y-1 hover:border-sky-300/40 hover:bg-white/10"
+          <div className="hero-content z-10 mx-auto max-w-5xl text-center">
+            <p
+              className={`hero-sequence-item font-lol mb-4 text-sm tracking-[0.3em] text-glow-blue uppercase md:text-base ${cinematicReady ? 'hero-sequence-ready' : ''
+                }`}
+              style={{ transitionDelay: '40ms' }}
+            >
+              {siteContent.hero.eyebrow}
+            </p>
+            <h1
+              className={`hero-sequence-item font-lol mb-5 bg-gradient-to-b from-[#f0e6d2] to-[#c8aa6e] bg-clip-text text-5xl font-black tracking-[0.08em] text-transparent md:text-7xl lg:text-8xl ${cinematicReady ? 'hero-sequence-ready' : ''
+                }`}
+              style={{ transitionDelay: '130ms' }}
+            >
+              <Typewriter text={siteContent.site.ownerName} speed={80} start={cinematicReady} />
+            </h1>
+            <p
+              className={`hero-sequence-item font-lol mb-6 text-lg tracking-[0.3em] text-glow-blue uppercase md:text-2xl ${cinematicReady ? 'hero-sequence-ready' : ''
+                }`}
+              style={{ transitionDelay: '210ms' }}
+            >
+              {siteContent.hero.title.prefix}{' '}
+              <span className="text-glow-gold">{siteContent.hero.title.accent}</span>{' '}
+              {siteContent.hero.title.suffix}
+            </p>
+            <p
+              className={`hero-sequence-item hero-description mx-auto mb-10 max-w-3xl text-lg leading-relaxed ${cinematicReady ? 'hero-sequence-ready' : ''
+                }`}
+              style={{ transitionDelay: '300ms' }}
+            >
+              {siteContent.hero.description}
+            </p>
+
+            <div
+              className={`hero-sequence-item flex flex-col justify-center gap-6 sm:flex-row ${cinematicReady ? 'hero-sequence-ready' : ''
+                }`}
+              style={{ transitionDelay: '380ms' }}
+            >
+              <a
+                href={siteContent.hero.primaryCta.href}
+                className="hex-button px-8 py-3 text-sm font-bold font-lol"
+                onClick={(event) => handleSectionLinkClick(event, siteContent.hero.primaryCta.href)}
               >
-                <p className="text-sm text-sky-300">Case study</p>
-                <h3 className="mt-3 text-xl font-semibold text-white">{project.title}</h3>
-                <p className="mt-3 text-sm leading-7 text-slate-300">{project.description}</p>
-              </article>
-            ))}
+                {siteContent.hero.primaryCta.label}
+              </a>
+              <a
+                href={siteContent.hero.secondaryCta.href}
+                className="hero-secondary-cta group relative overflow-hidden border border-[#0ac8b9] px-8 py-3 text-sm font-bold text-[#0ac8b9] transition-all duration-300 hover:bg-[#0ac8b9] hover:text-[#010a13] hover:shadow-[0_0_15px_rgba(10,200,185,0.6)] font-lol"
+                onClick={(event) => handleSectionLinkClick(event, siteContent.hero.secondaryCta.href)}
+              >
+                <span className="relative z-10">{siteContent.hero.secondaryCta.label}</span>
+              </a>
+            </div>
           </div>
         </section>
 
-        <section
-          id="contact"
-          className="rounded-3xl border border-sky-400/20 bg-sky-400/10 p-8 text-center"
-        >
-          <p className="text-sm font-medium uppercase tracking-[0.3em] text-sky-200">Contact</p>
-          <h2 className="mt-4 text-3xl font-semibold tracking-tight text-white">
-            Ready to turn this into your portfolio?
-          </h2>
-          <p className="mx-auto mt-4 max-w-2xl text-slate-200">
-            Swap in your name, projects, links, and brand styling. You can also split this
-            into reusable components once your sections start growing.
-          </p>
-          <a
-            href="mailto:hello@example.com"
-            className="mt-8 inline-flex rounded-full bg-white px-5 py-3 text-sm font-medium text-slate-950 transition hover:bg-slate-200"
-          >
-            hello@example.com
-          </a>
+        <section id="about" className="about-section">
+          {prefersReducedMotion ? (
+            <div className="pt-12 pb-16 md:pt-16 md:pb-20">
+              <RevealBlock className="mx-auto max-w-6xl px-6 text-center" disabled>
+                <SectionHeading centered className="mb-10 md:mb-12">
+                  {siteContent.about.heading}
+                </SectionHeading>
+              </RevealBlock>
+              <TechMarquee items={siteContent.marquee.items} />
+              <div className="mx-auto mt-12 max-w-6xl px-6">
+                <div className="about-cards-grid">
+                  {siteContent.about.cards.map((card, index) => (
+                    <RevealBlock
+                      key={card.title}
+                      className="about-card hex-border-box p-6 text-left md:p-8"
+                      delay={Math.min(index * 80, 240)}
+                      disabled
+                    >
+                      <h3 className="about-card-title font-lol text-lg tracking-[0.2em] text-glow-gold uppercase md:text-xl">
+                        {card.title}
+                      </h3>
+                      <p className="about-card-description mt-4 text-base leading-8 text-[#a09b8c]">
+                        {card.description}
+                      </p>
+                    </RevealBlock>
+                  ))}
+                </div>
+              </div>
+            </div>
+          ) : (
+            <DeferredSection rootMargin="800px 0px" minHeight="100vh">
+              <Suspense fallback={<SectionFallback minHeight="100vh" />}>
+                <AboutCardsStack
+                  cards={siteContent.about.cards}
+                  heading={siteContent.about.heading}
+                  marqueeItems={siteContent.marquee.items}
+                />
+              </Suspense>
+            </DeferredSection>
+          )}
         </section>
-      </main>
+
+        <SectionDivider />
+
+        <DeferredSection rootMargin="1200px 0px" minHeight="100vh">
+          <Suspense fallback={<SectionFallback minHeight="100vh" />}>
+            <ProjectsSection
+              projectsMeta={siteContent.projects}
+              prefersReducedMotion={prefersReducedMotion}
+            />
+          </Suspense>
+        </DeferredSection>
+
+        <SectionDivider />
+
+        <DeferredSection rootMargin="600px 0px" minHeight="60vh">
+          <Suspense fallback={<SectionFallback minHeight="60vh" />}>
+            <EducationStackSection
+              education={siteContent.education}
+              skills={siteContent.skills}
+              prefersReducedMotion={prefersReducedMotion}
+            />
+          </Suspense>
+        </DeferredSection>
+
+        <SectionDivider />
+
+        <DeferredSection rootMargin="600px 0px" minHeight="50vh">
+          <Suspense fallback={<SectionFallback minHeight="50vh" />}>
+            <ContactSection
+              contact={siteContent.contact}
+              prefersReducedMotion={prefersReducedMotion}
+            />
+          </Suspense>
+        </DeferredSection>
+
+        <footer className="site-footer mt-auto border-t border-[#c8aa6e]/20 bg-[#010a13] py-8 text-center">
+          <DeferredSection rootMargin="400px 0px" minHeight="3rem">
+            <Suspense fallback={<div style={{ minHeight: '3rem' }} aria-hidden="true" />}>
+              <FooterSignal items={siteContent.footer.signal} />
+            </Suspense>
+          </DeferredSection>
+          <p className="font-lol text-sm tracking-widest text-[#a09b8c]">
+            <span className="text-glow-gold">{siteContent.site.brand}</span> &copy;{' '}
+            {siteContent.site.year}. {siteContent.footer.suffix}
+          </p>
+        </footer>
+      </div>
     </div>
   )
 }
