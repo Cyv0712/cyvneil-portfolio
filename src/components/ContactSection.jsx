@@ -28,7 +28,7 @@ export default function ContactSection({ contact, prefersReducedMotion }) {
 
         <a
           href={`mailto:${contact.primaryEmail}`}
-          className="hex-button mt-10 inline-block px-8 py-3 text-sm font-bold font-lol"
+          className="hex-button hex-button-email mt-10 inline-block max-w-full px-4 py-3 text-xs font-bold font-lol sm:px-8 sm:text-sm"
         >
           {contact.primaryEmail}
         </a>

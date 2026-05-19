@@ -20,6 +20,10 @@
 
 html {
   scroll-behavior: auto;
+  /* `clip` is stronger than `hidden`: it prevents accidental horizontal
+     scroll on mobile without creating a new scroll container that would
+     break sticky/position: fixed on iOS Safari. */
+  overflow-x: clip;
 }
 
 section[id] {
@@ -28,9 +32,8 @@ section[id] {
 
 body {
   margin: 0;
-  min-width: 320px;
   min-height: 100vh;
-  overflow-x: hidden;
+  overflow-x: clip;
   background-color: var(--hex-darker);
   background-image: radial-gradient(circle at 50% 50%, var(--hex-dark) 0%, var(--hex-darker) 100%);
   color: #f0e6d2;
@@ -40,6 +43,9 @@ body {
   position: relative;
   z-index: 1;
   min-height: 100vh;
+  /* Defensive clip: any decorative child that bleeds beyond the viewport
+     (orbit scales, marquee tracks during transitions, etc.) is contained. */
+  overflow-x: clip;
 }
 
 a {
@@ -121,21 +127,25 @@ a {
 .intro-name {
   position: relative;
   margin-bottom: 20px;
-  padding: 0 20px;
+  padding: 0 16px;
   color: transparent;
   background: linear-gradient(to bottom, #f0e6d2 0%, var(--hex-gold) 100%);
   background-clip: text;
   -webkit-background-clip: text;
   filter: drop-shadow(0 0 10px var(--hex-gold-glow));
-  font-size: 2rem;
+  font-size: clamp(1.4rem, 7vw, 2rem);
   font-weight: 900;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.05em;
   line-height: 1.2;
+  /* Wrap onto a second line on very narrow screens instead of overflowing. */
+  overflow-wrap: anywhere;
 }
 
 @media (min-width: 768px) {
   .intro-name {
+    padding: 0 20px;
     font-size: 4rem;
+    letter-spacing: 0.1em;
   }
 }
 
@@ -261,6 +271,7 @@ a {
 .hex-button {
   position: relative;
   overflow: hidden;
+  max-width: 100%;
   border: 1px solid var(--hex-gold);
   background: transparent;
   color: var(--hex-gold);
@@ -268,6 +279,22 @@ a {
   letter-spacing: 0.1em;
   text-transform: uppercase;
   transition: all 0.3s ease;
+  /* Long values (e.g. the contact email) wrap inside the button rather than
+     blowing out its container on narrow screens. */
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.hex-button-email {
+  /* Email pill needs a slightly tighter letter-spacing so the addr fits on
+     a single line on phones; falls back to the default cap-spacing on >=sm. */
+  letter-spacing: 0.04em;
+}
+
+@media (min-width: 640px) {
+  .hex-button-email {
+    letter-spacing: 0.1em;
+  }
 }
 
 .hex-button:hover {
@@ -465,6 +492,35 @@ nav {
 
 .hero-description {
   color: #c8c0aa;
+}
+
+.hero-name {
+  font-size: clamp(1.85rem, 9vw, 3rem);
+  letter-spacing: 0.02em;
+  line-height: 1.1;
+  word-spacing: 0.05em;
+  /* Allow the gradient name to flow onto two lines on very narrow screens
+     without overflowing the viewport. */
+  overflow-wrap: anywhere;
+}
+
+@media (min-width: 640px) {
+  .hero-name {
+    font-size: clamp(3rem, 7vw, 4.5rem);
+    letter-spacing: 0.08em;
+  }
+}
+
+@media (min-width: 768px) {
+  .hero-name {
+    font-size: 4.5rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .hero-name {
+    font-size: 6rem;
+  }
 }
 
 .hero-sequence-item {
@@ -1696,5 +1752,217 @@ nav {
   .project-preview-grid,
   .project-preview-spotlight {
     transition: none !important;
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* Mobile / small viewport responsiveness                              */
+/* ------------------------------------------------------------------ */
+
+/* Tablet and below: tone down decorative scenes that crowd small screens. */
+@media (max-width: 900px) {
+  .hero-shell {
+    min-height: calc(100dvh - 5rem);
+    padding-block: 3rem;
+  }
+
+  .hero-grid {
+    inset: 6% 4%;
+    background-size: 48px 48px;
+  }
+
+  .section-divider {
+    padding: 1.25rem 1rem;
+  }
+
+  .contact-shell {
+    border-radius: 24px;
+    padding: 1.5rem;
+  }
+
+  .projects-section {
+    padding: 4rem 1.25rem;
+  }
+
+  /* CSS-level guard: even if the GSAP horizontal layout somehow mounts on a
+     narrow viewport (stale HMR, dev-tools resize, etc.), force the track to
+     collapse into a centered vertical stack so cards stay readable instead
+     of getting cut off at the edges. */
+  .projects-horizontal-viewport {
+    height: auto;
+    min-height: 0;
+    overflow: visible;
+    padding-top: 3rem;
+    padding-bottom: 3rem;
+  }
+
+  .projects-horizontal-stage {
+    overflow: visible;
+    align-items: stretch;
+  }
+
+  .projects-horizontal-track {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 1.5rem;
+    padding-inline: 0;
+    /* Cancel the GSAP-applied translateX so cards land centered. */
+    transform: none !important;
+    width: 100%;
+  }
+
+  .projects-horizontal-card {
+    width: 100%;
+    max-width: none;
+    max-height: none;
+    overflow: visible;
+  }
+
+  /* Static fallback: guarantee grid items shrink to the column instead of
+     being forced wider by their content's intrinsic min-width. */
+  .projects-fallback-list,
+  .projects-fallback-card {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .projects-fallback-card>* {
+    min-width: 0;
+  }
+}
+
+/* Phone widths: focus the hero, shrink chrome, ease typography. */
+@media (max-width: 640px) {
+  nav.sticky {
+    padding-inline: 1rem;
+    padding-block: 0.75rem;
+  }
+
+  .hero-shell {
+    padding-inline: 1rem;
+  }
+
+  .hero-orbit-outer,
+  .hero-orbit-middle,
+  .hero-orbit-inner,
+  .hero-core-glow,
+  .hero-hex {
+    /* Compress the orbital scene so it never crowds the text on phones.
+       Using the `scale` CSS property keeps the keyframe transforms intact. */
+    scale: 0.78;
+  }
+
+  .hero-content {
+    padding-inline: 0.25rem;
+  }
+
+  .hero-description {
+    font-size: 1rem;
+    line-height: 1.7;
+  }
+
+  .about-section {
+    padding-bottom: 0;
+  }
+
+  .about-cards-grid {
+    gap: 1.25rem;
+  }
+
+  .about-card.hex-border-box {
+    padding: 1.5rem;
+    border-radius: 20px;
+  }
+
+  .about-card-description {
+    line-height: 1.7;
+    font-size: 0.95rem;
+  }
+
+  .projects-section {
+    padding: 3rem 1rem;
+  }
+
+  .projects-fallback-card {
+    padding: 1.25rem;
+    border-radius: 20px;
+  }
+
+  .projects-fallback-preview .project-preview-frame,
+  .projects-fallback-preview .project-preview-fallback {
+    min-height: 220px;
+  }
+
+  .projects-fallback-title {
+    font-size: 1.3rem;
+  }
+
+  .projects-fallback-description,
+  .projects-fallback-proof {
+    font-size: 0.92rem;
+    line-height: 1.7;
+  }
+
+  .projects-fallback-live-button,
+  .projects-fallback-repo-button {
+    flex: 1 1 100%;
+    min-width: 0;
+  }
+
+  .skills-section {
+    padding-inline: 1rem;
+    padding-block: 3.5rem;
+  }
+
+  .skills-section .hex-border-box {
+    padding: 1.25rem;
+    border-radius: 20px;
+  }
+
+  .education-stack-divider {
+    margin-block: 3rem;
+  }
+
+  .contact-shell {
+    padding: 1.25rem;
+  }
+
+  .contact-method-row {
+    gap: 0.75rem;
+  }
+
+  .section-divider {
+    padding: 1rem 0.75rem;
+  }
+
+  /* Footer signal becomes hard to read at speed on small screens — pause it
+     and let the mask still hint at the looping behavior. */
+  .footer-signal-item {
+    font-size: 0.58rem;
+    letter-spacing: 0.3em;
+  }
+
+  .footer-signal-group {
+    gap: 1.25rem;
+    padding-right: 1.25rem;
+  }
+}
+
+/* Extra small screens (≤380px): trim aggressively so nothing clips. */
+@media (max-width: 380px) {
+  .hero-name {
+    letter-spacing: 0;
+  }
+
+  .hero-content p.tracking-\[0\.3em\] {
+    letter-spacing: 0.18em;
+  }
+
+  .hero-orbit-outer,
+  .hero-orbit-middle,
+  .hero-orbit-inner,
+  .hero-core-glow,
+  .hero-hex {
+    scale: 0.68;
   }
 }

@@ -7,7 +7,11 @@ import SectionHeading from './components/SectionHeading.jsx'
 import TechMarquee from './components/TechMarquee.jsx'
 import Typewriter from './components/Typewriter.jsx'
 import { siteContent } from './content/siteContent.js'
-import { useReducedMotion } from './hooks/useReducedMotion.js'
+import {
+  useCoarsePointer,
+  useDisableScrollAnimations,
+  useReducedMotion,
+} from './hooks/useReducedMotion.js'
 import {
   getActiveSectionId,
   scrollToSectionById,
@@ -29,6 +33,8 @@ function SectionFallback({ minHeight = '60vh' }) {
 
 function App() {
   const prefersReducedMotion = useReducedMotion()
+  const disableScrollAnimations = useDisableScrollAnimations()
+  const isCoarsePointer = useCoarsePointer()
   const introTimersRef = useRef([])
   const [menuOpen, setMenuOpen] = useState(false)
   const [systemStatus, setSystemStatus] = useState(siteContent.intro.initialStatus)
@@ -169,8 +175,12 @@ function App() {
     [prefersReducedMotion, updateActiveSection],
   )
 
+  // Mouse-only parallax is meaningless on touch devices (and ChromeOS-style
+  // hover emulation can also cause jitter), so we skip the handler entirely.
+  const heroParallaxEnabled = !prefersReducedMotion && !isCoarsePointer
+
   const handleHeroMove = (event) => {
-    if (prefersReducedMotion) {
+    if (!heroParallaxEnabled) {
       return
     }
 
@@ -182,6 +192,9 @@ function App() {
   }
 
   const resetHeroMove = () => {
+    if (!heroParallaxEnabled) {
+      return
+    }
     setHeroShift({ x: 0, y: 0 })
   }
 
@@ -300,7 +313,7 @@ function App() {
               {siteContent.hero.eyebrow}
             </p>
             <h1
-              className={`hero-sequence-item font-lol mb-5 bg-gradient-to-b from-[#f0e6d2] to-[#c8aa6e] bg-clip-text text-5xl font-black tracking-[0.08em] text-transparent md:text-7xl lg:text-8xl ${cinematicReady ? 'hero-sequence-ready' : ''
+              className={`hero-name hero-sequence-item font-lol mb-5 bg-gradient-to-b from-[#f0e6d2] to-[#c8aa6e] bg-clip-text font-black text-transparent ${cinematicReady ? 'hero-sequence-ready' : ''
                 }`}
               style={{ transitionDelay: '130ms' }}
             >
@@ -324,20 +337,20 @@ function App() {
             </p>
 
             <div
-              className={`hero-sequence-item flex flex-col justify-center gap-6 sm:flex-row ${cinematicReady ? 'hero-sequence-ready' : ''
+              className={`hero-sequence-item flex flex-col items-center justify-center gap-4 sm:flex-row sm:gap-6 ${cinematicReady ? 'hero-sequence-ready' : ''
                 }`}
               style={{ transitionDelay: '380ms' }}
             >
               <a
                 href={siteContent.hero.primaryCta.href}
-                className="hex-button px-8 py-3 text-sm font-bold font-lol"
+                className="hex-button w-full max-w-xs px-6 py-3 text-center text-sm font-bold font-lol sm:w-auto sm:px-8"
                 onClick={(event) => handleSectionLinkClick(event, siteContent.hero.primaryCta.href)}
               >
                 {siteContent.hero.primaryCta.label}
               </a>
               <a
                 href={siteContent.hero.secondaryCta.href}
-                className="hero-secondary-cta group relative overflow-hidden border border-[#0ac8b9] px-8 py-3 text-sm font-bold text-[#0ac8b9] transition-all duration-300 hover:bg-[#0ac8b9] hover:text-[#010a13] hover:shadow-[0_0_15px_rgba(10,200,185,0.6)] font-lol"
+                className="hero-secondary-cta group relative w-full max-w-xs overflow-hidden border border-[#0ac8b9] px-6 py-3 text-center text-sm font-bold text-[#0ac8b9] transition-all duration-300 hover:bg-[#0ac8b9] hover:text-[#010a13] hover:shadow-[0_0_15px_rgba(10,200,185,0.6)] font-lol sm:w-auto sm:px-8"
                 onClick={(event) => handleSectionLinkClick(event, siteContent.hero.secondaryCta.href)}
               >
                 <span className="relative z-10">{siteContent.hero.secondaryCta.label}</span>
@@ -347,9 +360,9 @@ function App() {
         </section>
 
         <section id="about" className="about-section">
-          {prefersReducedMotion ? (
+          {disableScrollAnimations ? (
             <div className="pt-12 pb-16 md:pt-16 md:pb-20">
-              <RevealBlock className="mx-auto max-w-6xl px-6 text-center" disabled>
+              <RevealBlock className="mx-auto max-w-6xl px-6 text-center" disabled={prefersReducedMotion}>
                 <SectionHeading centered className="mb-10 md:mb-12">
                   {siteContent.about.heading}
                 </SectionHeading>
@@ -362,7 +375,7 @@ function App() {
                       key={card.title}
                       className="about-card hex-border-box p-6 text-left md:p-8"
                       delay={Math.min(index * 80, 240)}
-                      disabled
+                      disabled={prefersReducedMotion}
                     >
                       <h3 className="about-card-title font-lol text-lg tracking-[0.2em] text-glow-gold uppercase md:text-xl">
                         {card.title}
@@ -394,7 +407,7 @@ function App() {
           <Suspense fallback={<SectionFallback minHeight="100vh" />}>
             <ProjectsSection
               projectsMeta={siteContent.projects}
-              prefersReducedMotion={prefersReducedMotion}
+              prefersReducedMotion={disableScrollAnimations}
             />
           </Suspense>
         </DeferredSection>
