@@ -18,7 +18,6 @@ export default function EducationStackSection({ education, skills, prefersReduce
   return (
     <RevealBlock
       as="section"
-      id="education"
       className="skills-section px-6 py-20"
       disabled={prefersReducedMotion}
     >

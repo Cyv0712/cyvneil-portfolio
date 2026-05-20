@@ -239,7 +239,7 @@ export default function ProjectsSection({ projectsMeta, prefersReducedMotion }) 
 
   if (prefersReducedMotion) {
     return (
-      <section id="projects" className="projects-section relative border-y border-[#c8aa6e]/20 bg-[#091428]/40 px-6 py-20">
+      <section className="projects-section relative border-y border-[#c8aa6e]/20 bg-[#091428]/40 px-6 py-20">
         <div className="mx-auto max-w-6xl">
           <RevealBlock className="mb-16 text-center" disabled>
             <SectionHeading centered>{projectsMeta.heading}</SectionHeading>
@@ -267,7 +267,7 @@ export default function ProjectsSection({ projectsMeta, prefersReducedMotion }) 
   }
 
   return (
-    <section id="projects" className="projects-section relative border-y border-[#c8aa6e]/20 bg-[#091428]/40">
+    <section className="projects-section relative border-y border-[#c8aa6e]/20 bg-[#091428]/40">
       <HorizontalProjects
         projects={projects}
         heading={projectsMeta.heading}

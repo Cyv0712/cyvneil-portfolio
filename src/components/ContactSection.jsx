@@ -3,7 +3,7 @@ import SectionHeading from './SectionHeading.jsx'
 
 export default function ContactSection({ contact, prefersReducedMotion }) {
   return (
-    <RevealBlock as="section" id="contact" className="px-6 py-20" disabled={prefersReducedMotion}>
+    <RevealBlock as="section" className="px-6 py-20" disabled={prefersReducedMotion}>
       <div className="contact-shell mx-auto max-w-5xl p-10 text-center">
         <SectionHeading centered>{contact.heading}</SectionHeading>
         <p className="mx-auto mt-6 max-w-3xl leading-8 text-[#a09b8c]">

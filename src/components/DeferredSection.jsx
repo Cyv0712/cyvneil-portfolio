@@ -12,12 +12,18 @@ export default function DeferredSection({
   className = '',
   rootMargin = '600px 0px',
   minHeight,
+  forceRender = false,
   ...rest
 }) {
   const ref = useRef(null)
-  const [shouldRender, setShouldRender] = useState(!canObserve)
+  const [shouldRender, setShouldRender] = useState(!canObserve || forceRender)
 
   useEffect(() => {
+    if (forceRender) {
+      setShouldRender(true)
+      return undefined
+    }
+
     if (shouldRender) {
       return undefined
     }
@@ -45,7 +51,7 @@ export default function DeferredSection({
     return () => {
       observer.disconnect()
     }
-  }, [shouldRender, rootMargin])
+  }, [shouldRender, rootMargin, forceRender])
 
   const placeholderStyle = minHeight ? { minHeight } : undefined
 
@@ -60,3 +66,4 @@ export default function DeferredSection({
     </Tag>
   )
 }
+

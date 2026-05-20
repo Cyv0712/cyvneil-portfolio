@@ -144,20 +144,20 @@ export const siteContent = {
   contact: {
     heading: "Let's Connect",
     description:
-      'I do frontend, backend, and full-stack work, and I know enough CI/CD to get changes deployed without a mess. Need a screen fixed, an API built, or the whole thing from scratch — reach out.',
+      'Whether you need a robust database schema, secure API integration, responsive frontend portal, or an end-to-end web application built from scratch—I design functional, scale-ready systems that solve real-world problems. Let\'s discuss your project.',
     primaryEmail: 'cyvenriquez1@gmail.com',
     highlights: [
       {
         label: 'Capabilities',
-        value: 'Frontend, backend, or full stack. Comfortable with basic CI/CD for deploys.',
+        value: 'Full-stack development, database optimization, RESTful API design, and automated CI/CD pipelines.',
       },
       {
         label: 'Working Style',
-        value: 'I ask questions early, keep UX practical, and try to write backend code I would not hate revisiting.',
+        value: 'Practical UI/UX design, clean & maintainable code architecture, and transparent communication.',
       },
       {
         label: 'Availability',
-        value: 'Based in Cebu. Open to remote work.',
+        value: 'Based in Cebu, Philippines. Open to remote roles, contract projects, and global collaboration.',
       },
     ],
     methods: [
