@@ -389,7 +389,7 @@ function App() {
               </div>
             </div>
           ) : (
-            <DeferredSection rootMargin="800px 0px" minHeight="100vh">
+            <DeferredSection forceRender={mainLoaded} rootMargin="800px 0px" minHeight="100vh">
               <Suspense fallback={<SectionFallback minHeight="100vh" />}>
                 <AboutCardsStack
                   cards={siteContent.about.cards}
@@ -403,7 +403,7 @@ function App() {
 
         <SectionDivider />
 
-        <DeferredSection rootMargin="1200px 0px" minHeight="100vh">
+        <DeferredSection id="projects" forceRender={mainLoaded} rootMargin="1200px 0px" minHeight="100vh">
           <Suspense fallback={<SectionFallback minHeight="100vh" />}>
             <ProjectsSection
               projectsMeta={siteContent.projects}
@@ -414,7 +414,7 @@ function App() {
 
         <SectionDivider />
 
-        <DeferredSection rootMargin="600px 0px" minHeight="60vh">
+        <DeferredSection id="education" forceRender={mainLoaded} rootMargin="600px 0px" minHeight="60vh">
           <Suspense fallback={<SectionFallback minHeight="60vh" />}>
             <EducationStackSection
               education={siteContent.education}
@@ -426,7 +426,7 @@ function App() {
 
         <SectionDivider />
 
-        <DeferredSection rootMargin="600px 0px" minHeight="50vh">
+        <DeferredSection id="contact" forceRender={mainLoaded} rootMargin="600px 0px" minHeight="50vh">
           <Suspense fallback={<SectionFallback minHeight="50vh" />}>
             <ContactSection
               contact={siteContent.contact}
@@ -436,7 +436,7 @@ function App() {
         </DeferredSection>
 
         <footer className="site-footer mt-auto border-t border-[#c8aa6e]/20 bg-[#010a13] py-8 text-center">
-          <DeferredSection rootMargin="400px 0px" minHeight="3rem">
+          <DeferredSection forceRender={mainLoaded} rootMargin="400px 0px" minHeight="3rem">
             <Suspense fallback={<div style={{ minHeight: '3rem' }} aria-hidden="true" />}>
               <FooterSignal items={siteContent.footer.signal} />
             </Suspense>
